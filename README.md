@@ -24,7 +24,7 @@ calendar day after the due date. Zero will be awarded after ten calendar days la
 4. Submit early enough to ensure that your submission is processed by 11:59 pm.
 5. Keep the email that will be generated automatically by the system as proof of your
 submission.
-Context of the Assignment
+# Context of the Assignment
 Analysis and synthesis: There are at least two complementary aspects to the practice of
 engineering. One could be described as an understanding of how things (machines, structures,
 systems, etc.) work and how they can be put together from components. This is called
@@ -32,7 +32,9 @@ systems, etc.) work and how they can be put together from components. This is ca
 computer calculations that allow something (integrity, safety, reliability, cost, etc.) to be
 demonstrated. This is “analysis”. You will all have both of these abilities to a greater of lesser
 extent and we will help you to develop them a lot further over the course of your studies.
-Models: A crucial link between analysis and synthesis is the ability to create an appropriate
+
+# Models: 
+A crucial link between analysis and synthesis is the ability to create an appropriate
 mathematical or computational model of the thing (“system”) that you are creating
 (“designing”). In this context a model is a representation of the system by one or more
 mathematical equations: typically, by a set of equations. Such a model is required so that the
@@ -47,7 +49,9 @@ highly detailed and accurate model of some system could be created. Such an appr
 always be justified. It is more usual that time and other resources are constratined, so that the
 “appropriate” model is one that captures only the most important governing equations and can
 readily be solved.
-Simplifying assumptions: Various assumptions will be made based on an understanding of the
+
+# Simplifying assumptions: 
+Various assumptions will be made based on an understanding of the
 thing (“system”) that is being created (“designed”). The resulting set of equations, and
 consequently the solution(s) of the equations, will therefore depend on the assumptions that are
 made. It is therefore crucial that the assumptions made in developing the model are clearly

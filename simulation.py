@@ -6,7 +6,6 @@ import matplotlib.patches as patches
 from matplotlib.patches import Rectangle
 from matplotlib import transforms
 
-
 def derivatives(X_k, u_k):
     # function: derivatives
     # inputs:

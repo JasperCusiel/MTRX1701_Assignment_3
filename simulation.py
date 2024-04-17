@@ -5,6 +5,11 @@ from matplotlib.animation import FFMpegWriter
 import matplotlib.patches as patches
 from matplotlib.patches import Rectangle
 from matplotlib import transforms
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.image as img
+import matplotlib.markers as markers
+from matplotlib.markers import MarkerStyle
+import matplotlib.font_manager
 
 def derivatives(X_k, u_k):
     # function: derivatives
@@ -160,7 +165,6 @@ def control_model(d_r, d_l, v_max):
 def simulate(ts, dt, X, robot_d, r, th, x0, y0, a, b, T, vmax):
     Xs = []
     for t in ts:
-        # Your code here
         s_r, s_l = sensor_positions(X, r, th)
         d_r = track_model(s_r[0], s_r[1], x0, y0, a, b, T)
         d_l = track_model(s_l[0], s_l[1], x0, y0, a, b, T)
@@ -177,49 +181,105 @@ def simulate(ts, dt, X, robot_d, r, th, x0, y0, a, b, T, vmax):
 
 
 if __name__ == '__main__':
+    ####################################################################################
+    #                            Simulation Parameters                                 #
+    ####################################################################################
+    dt = 1  # timestep (s)
+    t_start = 0  # time start (s)
+    t_end = 180  # time end (s)
+    t = np.arange(t_start, t_end, dt)  # List of evenly spaced timestamps
 
-    X = np.zeros(3)  # vehicle initial pose
-    dt = 1  # s
-    t_start = 0  # s
-    t_end = 180  # s
-    t = np.arange(t_start, t_end, dt)  # timesteps
-    robot_length = 0.067  # m
-    robot_width = 0.06  # m
-    r = np.sqrt(robot_length ** 2 + (robot_width / 2) ** 2)  # m
-    th = np.arctan2(robot_width / 2, robot_length)  # rad
-    d = robot_width / 2  # m
-    r_wheel = 0.025  # m
-    omega = 0.25  # rad
+    # Robot physical dimensions
+    robot_length = 0.105 # m
+    robot_width = 0.07  # m
+    """
+      Distance from the bottom left of the robot to the center of mass
+          +------------------+
+          |                  |
+    COM_offset_y   COM       |
+          |                  |
+         (xy)- COM_offset_x -+ """
+
+    COM_offset_x = 0.04  # m
+    COM_offset_y = robot_width / 2  # m
+
+    # Robot sensor positions
+    sensor_to_COM_distance = 0.055  # m
+    distance_between_sensors = 0.021  # m
+    r = np.sqrt(sensor_to_COM_distance ** 2 + (distance_between_sensors / 2) ** 2)  # m
+    th = np.arctan2(distance_between_sensors / 2, sensor_to_COM_distance)  # rad
+
+    # Distance between COM and the wheel rotation axis
+    d = 0.04    # m
+
+    # Maximum wheel speed
+    r_wheel = 0.025  # Wheel radius (m)
+    omega = 0.25  # Maximum wheel angular velocity (rad/s)
     v_max = omega * r_wheel  # m/s
-    print(v_max)
-    # vehicle command
-    u = np.zeros(2)  # m/s
 
-    # ellipse parameters
+    # Vehicle vectors
+    u = np.zeros(2)
+    X = np.zeros(3)  # Vehicle initial pose of COM
+
+    # Track ellipse parameters
     ellipse_a = 0.125  # m
     ellipse_b = 0.075  # m
     ellipse_origin_x = 0  # m
     ellipse_origin_y = ellipse_b  # m
     ellipse_thickness = 0.015  # m
 
-    fig, ax = plt.subplots()  # Create a new figure with a single subplot
-    plot, = ax.plot([], [], 'b-')
+    ####################################################################################
+    #                                  Plot Setup                                      #
+    ####################################################################################
+
+    # Create new figure with a single subplot
+    fig, ax = plt.subplots()
+    plot, = ax.plot([], [], 'c--', label="Center Of Mass Path")
+
+    # Make plot square
+    ax.set_aspect('equal', adjustable='box')
+
+    # Adjust plot limits so robot doesn't disappear off the plot
     plt.xlim(-18, 18)
     plt.ylim(-10, 25)
 
-    metadata = dict(title='Movie', artist='jasper')
-    writer = FFMpegWriter(fps=60, metadata=metadata)
+    # Add labels with font
+    plt.xlabel("x (cm)", fontname='Times New Roman')
+    plt.ylabel("y (cm)", fontname='Times New Roman')
+
+    title = "Plot of path over t = {}s with v = {}cm/s, d = {}cm, w = {}cm, l = {}cm".format(t_end, round(v_max * 100, 2), round(d * 100, 2), round(robot_width * 100, 2), round(robot_length * 100, 2))
+
+    plt.title(label=title, fontdict={'family': 'serif', 'color': 'black', 'size': 10})
+
+    # Set the font to Times New Roman
+    for tick in ax.get_xticklabels():
+        tick.set_fontname("Times New Roman")
+    for tick in ax.get_yticklabels():
+        tick.set_fontname("Times New Roman")
+
+    ####################################################################################
+    #                                Run Simulation                                    #
+    ####################################################################################
 
     sim_data = simulate(t, dt, X, d, r, th, ellipse_origin_x, ellipse_origin_y, ellipse_a, ellipse_b, ellipse_thickness, v_max)
 
+    # Pull data from simulation and store in lists to make it easier to access
     sim_x_values = sim_data[:, 1]
     sim_y_values = sim_data[:, 2]
     sim_heading_angles = sim_data[:, 3]
+    sim_sensor_right_position_x = sim_data[:, 6]
+    sim_sensor_right_position_y = sim_data[:, 7]
+    sim_sensor_left_position_x = sim_data[:, 8]
+    sim_sensor_left_position_y = sim_data[:, 9]
 
     plot_x_data = []
     plot_y_data = []
 
-    # add in two ellipses to draw path
+    ####################################################################################
+    #                             Add Graphics to Plot                                 #
+    ####################################################################################
+
+    # Add in two ellipses to draw track outline
     outer_ellipse = patches.Ellipse((ellipse_origin_x * 100, ellipse_origin_y * 100),
                                     (ellipse_a * 200 + (ellipse_thickness * 100 / 2)),
                                     (ellipse_b * 200 + (ellipse_thickness * 100 / 2)), edgecolor='None', fc='black', lw=2)
@@ -230,24 +290,50 @@ if __name__ == '__main__':
                                     (ellipse_b * 200 - (ellipse_thickness * 100 / 2)), edgecolor='None', fc='white', lw=2)
     ax.add_patch(inner_ellipse)
 
-    # add in robot outline rectangle
-    robot_body = Rectangle(xy=(0, -(robot_width*100/2)), width=(robot_length * 100), height=(robot_width * 100), facecolor='none', edgecolor='black')
+    # Add in robot outline as a rectangle
+    robot_body = Rectangle(xy=(0, 0), width=(robot_length * 100), height=(robot_width * 100),
+                           facecolor='none', edgecolor='black')
     ax.add_patch(robot_body)
 
-    with writer.saving(fig, 'simulation.mp4', 200):
-        for i in range(0, len(sim_x_values)):
+    # Add sensor dots
+    left_sensor = patches.Circle((float(sim_sensor_left_position_x[0]*100), float(sim_sensor_left_position_y[0] * 100)), radius=0.1, color='orange', label='Left Sensor')
+    ax.add_patch(left_sensor)
+    right_sensor = patches.Circle((float(sim_sensor_right_position_x[0]*100), float(sim_sensor_right_position_y[0] * 100)), radius=0.1, color='green', label='Right Sensor')
+    ax.add_patch(right_sensor)
+
+    # Add center of mass marker
+    com_marker, = ax.plot(*(0, 0), marker="+", markersize=10, color='black', label="Center Of Mass")
+
+    plt.legend(loc='upper right', handles=[left_sensor, right_sensor, com_marker, plot], fontsize=6)
+
+    ####################################################################################
+    #                              Animation Creation                                  #
+    ####################################################################################
+
+    # FFMpeg Writer Settings
+    metadata = dict(title='Robot Simulation', artist='Jasper Cusiel')
+    writer = FFMpegWriter(fps=60, metadata=metadata)
+
+    with writer.saving(fig, 'simulation.mp4', 300):
+        for i in range(1, len(sim_x_values)):
             plot_x_data.append(sim_x_values[i] * 100)
             plot_y_data.append(sim_y_values[i] * 100)
-            # if i > 60:
-            #     # removes the first item to give the trailing line effect
-            #     plot_x_data.pop(0)
-            #     plot_y_data.pop(0)
-            # Rotate Rectangle
-            t = transforms.Affine2D().rotate_deg_around(robot_body.get_x(),
-                                                        robot_body.get_y() + robot_body.get_height() / 2,
-                                                        float(np.degrees(sim_heading_angles[i])))
+
+            # Move center of mass marker
+            com_marker.set_data([sim_x_values[i] * 100], [sim_y_values[i] * 100])
+
+            # Move sensor dots
+            right_sensor.set(center=(sim_sensor_right_position_x[i] * 100, sim_sensor_right_position_y[i] * 100))
+            left_sensor.set(center=(sim_sensor_left_position_x[i] * 100, sim_sensor_left_position_y[i] * 100))
+
+            # Move robot body rectangle
+            robot_body.set_x(float(sim_x_values[i] * 100) - COM_offset_x * 100)
+            robot_body.set_y(float((sim_y_values[i] * 100) - COM_offset_y * 100))
+
+            # Rotate rectangle
+            t = transforms.Affine2D().rotate_deg_around(robot_body.get_x() + COM_offset_x * 100, robot_body.get_y() + COM_offset_y * 100, float(np.degrees(sim_heading_angles[i-1])))
             robot_body.set_transform(t + ax.transData)
-            # Move rectangle to new plot point
-            robot_body.set_xy((float((sim_x_values[i] * 100)), float((sim_y_values[i] * 100)-(robot_width*100/2))))
+
+            # Add data point to plot
             plot.set_data(plot_x_data, plot_y_data)
             writer.grab_frame()

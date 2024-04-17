@@ -1,15 +1,9 @@
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.animation import FFMpegWriter
 import matplotlib.patches as patches
 from matplotlib.patches import Rectangle
 from matplotlib import transforms
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-import matplotlib.image as img
-import matplotlib.markers as markers
-from matplotlib.markers import MarkerStyle
-import matplotlib.font_manager
 
 def derivatives(X_k, u_k):
     # function: derivatives

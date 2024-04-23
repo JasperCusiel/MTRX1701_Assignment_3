@@ -136,17 +136,21 @@ def track_model(x, y, x_0, y_0, a, b, T):
     return signed_distance
 
 
-def control_model(d_r, d_l, v_max, use_proportional = False):
+def control_model(d_r, d_l, v_max, distance_between_sensors, use_proportional = False):
     # function: control_model
     # inputs:
     #   d_r - distance from right sensor to track
     #   d_l - distance from left sensor to track
     #   v_max - maximum velocity
+    kp = 0.1725      # Proportional constant
 
-    distance = d_r + d_l
     if use_proportional:
-        v_r = v_max * (abs(d_r)/distance)
-        v_l = v_max * (abs(d_l) / distance)
+        distance = d_r - d_l
+        print(kp * v_max)
+        v_r = 0.6 * (v_max - (kp * v_max * (d_l / distance_between_sensors)))
+        v_l = 0.6 * (v_max - (kp * v_max * (d_r / distance_between_sensors)))
+        # v_r =v_max - (abs(d_l) * 2.1)
+        # v_l = v_max - (abs(d_r) * 2.1)
     else:
         if d_l == 0:
             v_l = 0
@@ -161,13 +165,13 @@ def control_model(d_r, d_l, v_max, use_proportional = False):
     return v_r, v_l
 
 
-def simulate(ts, dt, X, robot_d, r, th, x0, y0, a, b, T, vmax):
+def simulate(ts, dt, X, robot_d, r, th, x0, y0, a, b, T, vmax, distance_between_sensors):
     Xs = []
     for t in ts:
         s_r, s_l = sensor_positions(X, r, th)
         d_r = track_model(s_r[0], s_r[1], x0, y0, a, b, T)
         d_l = track_model(s_l[0], s_l[1], x0, y0, a, b, T)
-        v_r, v_l = control_model(d_r, d_l, vmax)
+        v_r, v_l = control_model(d_r, d_l, vmax, distance_between_sensors, True)
 
         u = control_vector(v_r, v_l, robot_d)
 
@@ -185,7 +189,7 @@ if __name__ == '__main__':
     ####################################################################################
     dt = 0.02  # timestep (s)
     t_start = 0  # time start (s)
-    t_end = 10  # time end (s)
+    t_end = 4   # time end (s)
     t = np.arange(t_start, t_end, dt)  # List of evenly spaced timestamps
 
     # Robot physical dimensions
@@ -260,7 +264,7 @@ if __name__ == '__main__':
     ####################################################################################
 
     sim_data = simulate(t, dt, X, d, r, th, ellipse_origin_x, ellipse_origin_y, ellipse_a, ellipse_b, ellipse_thickness,
-                        v_max)
+                        v_max, distance_between_sensors)
 
     # Pull data from simulation and store in lists to make it easier to access
     sim_x_values = sim_data[:, 1]

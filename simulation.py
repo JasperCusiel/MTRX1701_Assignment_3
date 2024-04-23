@@ -136,21 +136,27 @@ def track_model(x, y, x_0, y_0, a, b, T):
     return signed_distance
 
 
-def control_model(d_r, d_l, v_max):
+def control_model(d_r, d_l, v_max, use_proportional = False):
     # function: control_model
     # inputs:
     #   d_r - distance from right sensor to track
     #   d_l - distance from left sensor to track
     #   v_max - maximum velocity
-    if d_l == 0:
-        v_l = 0
-        v_r = v_max
-    elif d_r == 0:
-        v_r = 0
-        v_l = v_max
+
+    distance = d_r + d_l
+    if use_proportional:
+        v_r = v_max * (abs(d_r)/distance)
+        v_l = v_max * (abs(d_l) / distance)
     else:
-        v_r = v_max
-        v_l = v_max
+        if d_l == 0:
+            v_l = 0
+            v_r = v_max
+        elif d_r == 0:
+            v_r = 0
+            v_l = v_max
+        else:
+            v_r = v_max
+            v_l = v_max
 
     return v_r, v_l
 

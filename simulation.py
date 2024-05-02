@@ -142,15 +142,13 @@ def control_model(d_r, d_l, v_max, distance_between_sensors, use_proportional = 
     #   d_r - distance from right sensor to track
     #   d_l - distance from left sensor to track
     #   v_max - maximum velocity
-    kp = 0.1725      # Proportional constant
+    #   distance_between_sensors - physical distance between the sensors on the robot
+    #   use_proportional - set True to use the proportional controller
+    kp = 0.055      # Proportional constant
 
     if use_proportional:
-        distance = d_r - d_l
-        print(kp * v_max)
-        v_r = 0.6 * (v_max - (kp * v_max * (d_l / distance_between_sensors)))
-        v_l = 0.6 * (v_max - (kp * v_max * (d_r / distance_between_sensors)))
-        # v_r =v_max - (abs(d_l) * 2.1)
-        # v_l = v_max - (abs(d_r) * 2.1)
+        v_r = v_max - (kp * v_max * (d_l / distance_between_sensors))
+        v_l = v_max - (kp * v_max * (d_r / distance_between_sensors))
     else:
         if d_l == 0:
             v_l = 0
@@ -189,7 +187,7 @@ if __name__ == '__main__':
     ####################################################################################
     dt = 0.02  # timestep (s)
     t_start = 0  # time start (s)
-    t_end = 4   # time end (s)
+    t_end = 10   # time end (s)
     t = np.arange(t_start, t_end, dt)  # List of evenly spaced timestamps
 
     # Robot physical dimensions
@@ -224,8 +222,8 @@ if __name__ == '__main__':
     X = np.zeros(3)  # Vehicle initial pose of COM
 
     # Track ellipse parameters
-    ellipse_a = 0.125  # m
-    ellipse_b = 0.075  # m
+    ellipse_a = 0.18  # m
+    ellipse_b = 0.1  # m
     ellipse_origin_x = 0  # m
     ellipse_origin_y = ellipse_b  # m
     ellipse_thickness = 0.015  # m
@@ -239,7 +237,7 @@ if __name__ == '__main__':
     ax.set_aspect(1)
     plt.rcParams["font.family"] = "serif"
     plot, = ax.plot([], [], 'c--', label="Center Of Mass Path")
-    subtitle = "t = {}s with v = {}cm/s, d = {}cm, w = {}cm, l = {}cm".format(t_end, round(v_max * 100, 2), round(d * 100, 2), round(robot_width * 100, 2), round(robot_length * 100, 2))
+    subtitle = "t = {}s with v = {}cm/s, d = {}cm, w = {}cm, l = {}cm, Ellipse a = {}cm & b = {}cm".format(t_end, round(v_max * 100, 2), round(d * 100, 2), round(robot_width * 100, 2), round(robot_length * 100, 2), ellipse_a * 100, ellipse_b * 100)
     plt.suptitle(t=subtitle, y=0.05, size='small')
     fig.subplots_adjust(bottom=0.17)
 

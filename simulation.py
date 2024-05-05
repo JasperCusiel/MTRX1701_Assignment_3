@@ -175,9 +175,9 @@ def control_model(d_r, d_l, v_max, distance_between_sensors, control_mode='bang_
             error = 0.05 - d_r
 
             # tuned constants for P,I, and D
-            kp = 2.8
-            ki = 0
-            kd = 5
+            kp = 4.8
+            ki = 0.01
+            kd = 1.5
 
             # compute P,I, and D
             P = kp * error
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     ####################################################################################
     dt = 0.02  # timestep (s)
     t_start = 0  # time start (s)
-    t_end = 10   # time end (s)
+    t_end = 25   # time end (s)
     t = np.arange(t_start, t_end, dt)  # List of evenly spaced timestamps
 
     # Robot physical dimensions

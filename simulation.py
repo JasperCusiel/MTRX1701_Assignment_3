@@ -136,29 +136,68 @@ def track_model(x, y, x_0, y_0, a, b, T):
     return signed_distance
 
 
-def control_model(d_r, d_l, v_max, distance_between_sensors, use_proportional = False):
+def control_model(d_r, d_l, v_max, distance_between_sensors, control_mode='bang_bang'):
     # function: control_model
     # inputs:
     #   d_r - distance from right sensor to track
     #   d_l - distance from left sensor to track
     #   v_max - maximum velocity
     #   distance_between_sensors - physical distance between the sensors on the robot
-    #   use_proportional - set True to use the proportional controller
+    #   control_mode - set to 'bang_bang', 'proportional' or 'pid' to select controller to use, default is 'bang_bang'
     kp = 0.055      # Proportional constant
+    v_r = 0
+    v_l = 0
 
-    if use_proportional:
-        v_r = v_max - (kp * v_max * (d_l / distance_between_sensors))
-        v_l = v_max - (kp * v_max * (d_r / distance_between_sensors))
-    else:
-        if d_l == 0:
-            v_l = 0
-            v_r = v_max
-        elif d_r == 0:
-            v_r = 0
-            v_l = v_max
-        else:
-            v_r = v_max
-            v_l = v_max
+    match control_mode:
+        case 'bang_bang':
+            if d_l == 0:
+                v_l = 0
+                v_r = v_max
+            elif d_r == 0:
+                v_r = 0
+                v_l = v_max
+            elif d_l == 0 and d_r == 0:
+                v_r = 0
+                v_l = 0
+            else:
+                v_r = v_max
+                v_l = v_max
+
+        case 'proportional':
+            v_r = v_max - (kp * v_max * (d_l / distance_between_sensors))
+            v_l = v_max - (kp * v_max * (d_r / distance_between_sensors))
+
+        case 'pid':
+            global I
+            global prev_error
+
+            # compute error as offset (to center) minus right sensor
+            error = 0.05 - d_r
+
+            # tuned constants for P,I, and D
+            kp = 2.8
+            ki = 0
+            kd = 5
+
+            # compute P,I, and D
+            P = kp * error
+            I = I + ki * error
+            D = kd * (error - prev_error)
+
+            # merge signals into one
+            control_signal = P + I + D
+
+            prev_error = error
+
+            # ensure control signal does not exit bounds of v_max
+            # (implemented to solve runaway issue)
+            v = min(max(control_signal, -v_max), v_max)
+
+            # let the velocity at each sensor be equal to the
+            #   calculated velocity, plus or minus the distance
+            #   from the center of the robot to the sensor
+            v_r = (2 * v + distance_between_sensors) / 2
+            v_l = (2 * v - distance_between_sensors) / 2
 
     return v_r, v_l
 
@@ -169,7 +208,7 @@ def simulate(ts, dt, X, robot_d, r, th, x0, y0, a, b, T, vmax, distance_between_
         s_r, s_l = sensor_positions(X, r, th)
         d_r = track_model(s_r[0], s_r[1], x0, y0, a, b, T)
         d_l = track_model(s_l[0], s_l[1], x0, y0, a, b, T)
-        v_r, v_l = control_model(d_r, d_l, vmax, distance_between_sensors, True)
+        v_r, v_l = control_model(d_r, d_l, vmax, distance_between_sensors, 'bang_bang')
 
         u = control_vector(v_r, v_l, robot_d)
 
@@ -222,11 +261,15 @@ if __name__ == '__main__':
     X = np.zeros(3)  # Vehicle initial pose of COM
 
     # Track ellipse parameters
-    ellipse_a = 0.18  # m
-    ellipse_b = 0.1  # m
+    ellipse_a = 0.125  # m
+    ellipse_b = 0.075  # m
     ellipse_origin_x = 0  # m
     ellipse_origin_y = ellipse_b  # m
     ellipse_thickness = 0.015  # m
+
+    # PID controller variables
+    I = 0
+    prev_error = 0
 
     ####################################################################################
     #                                  Plot Setup                                      #
